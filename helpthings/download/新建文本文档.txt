@@ -1,0 +1,11 @@
+from PAM30 import PAMIE
+ie = PAMIE()
+ie.navigate('http://jw.nwpu.edu.cn/')
+#print ie.cookieGet()
+ie.buttonExists('btnSure')
+ie.setTextBox('zjh','2011300020')
+ie.setTextBox('mm','dq012369')
+ie.clickButton('btnSure')
+ie.navigate('http://jw.nwpu.edu.cn/jxpgXsAction.do?oper=listWj')
+#ie.executejavaScript("javascript:submitMe()") 
+ie.clickButtonImage(u'0000000076#@1989000019#@吴立言#@学生课堂教学评价问卷#@机械原理与设计#@0520130')
