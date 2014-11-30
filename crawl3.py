@@ -6,9 +6,10 @@ from sys import argv
 from os import makedirs, unlink, sep
 from os.path import dirname, exists, isdir, splitext
 from urllib.request import urlretrieve, urlopen
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, urlsplit, quote, urlunsplit
 from bs4 import BeautifulSoup
 from time import sleep
+from collections import deque
 
 class Retriever(object): # download web pages
     def __init__(self, url):
@@ -17,22 +18,22 @@ class Retriever(object): # download web pages
         
     def filename(self, url, deffile='index.html'):
         parsedurl = urlparse(url, 'http:', 0) #parse path
-        print(parsedurl)
+        ##print(parsedurl)
         path = parsedurl[1] + parsedurl[2] +'/'
-        print(path)
+        #print(path)
         ext = splitext(path)
-        print(ext)
-        print(path[-1])
+        #print(ext)
+        #print(path[-1])
         if ext[1] == '': #no file, use default
             if path[-1] == '/':
                 path += deffile
             else:
                 path += '/' + deffile
 
-        print(path)
+        #print(path)
 
         ldir = dirname(path) #local directory
-        print(ldir + '#############')
+        #print(ldir + '#############')
         if sep != '/':
             #os-indep path seprator
             ldir.replace('/', sep)
@@ -41,7 +42,7 @@ class Retriever(object): # download web pages
             if exists(ldir):
                 unlink(ldir)
             makedirs(ldir)
-        print(ldir)
+        #print(ldir)
         return path
 
     def download(self):
@@ -50,24 +51,28 @@ class Retriever(object): # download web pages
         except IOError:
             retval = ('*** ERROR: invalid URL "%s"' %\
                      self.url,)
+        except:
+            retval = ('*** ERROR: invalid URL "%s"' %\
+                     self.url,)
         return retval
 
     def parseAndGetLinks(self):
         # parse HTML, save links
+
         try:
             urlop = urlopen(self.url, timeout = 2)
             data = urlop.read().decode('utf-8', 'ignore')
             soup = BeautifulSoup(data)
             links = []
             for link in soup.find_all('a'):
-                print(link)
+                #print(link)
                 #print('why you can go in ^^^^^^',link.get('href'))
                 if link.get('href'):
                     #print('here get the href',link.get('href'))
                     if link.get('href')[:10] != 'javascript' and link.get('href') != '#':
                         links.append(link.get('href'))
 
-            print(links)
+            #print(links)
             return links
         except:
             print('****bad url:')
@@ -85,9 +90,12 @@ class Crawler(object):
     count = 0         # static download page counter
 
     def __init__(self, url):
-        self.q = [url]
-        self.seen = []
+        self.q = deque()
+        self.q.append(url)
+        self.seen = set()
         self.dom = urlparse(url)[1]
+        if self.dom[:4] == 'www.':
+            self.dom = self.dom[4:] # a very hard way to get the domin of the url
 
     def getPage(self, url):
         r = Retriever(url)
@@ -99,10 +107,11 @@ class Crawler(object):
         print('\n(', Crawler.count, ')')
         print('URL:', url)
         print('FILE:', retval[0])
-        self.seen.append(url)
+        #self.seen.append(url)
+        self.seen |= {url}
 
         links = r.parseAndGetLinks() # get and process links
-        if links == '':
+        if not links:
             return
         for eachlink in links:
             if eachlink[:4] != 'http' and \
@@ -114,6 +123,11 @@ class Crawler(object):
                 print('....discarded, mailto link')
                 continue
             
+            # to transform the non-ascii to ascii
+            eachlink = urlsplit(eachlink)
+            eachlink = list(eachlink)
+            eachlink[2] = quote(eachlink[2])
+            eachlink = urlunsplit(eachlink)
             if eachlink not in self.seen:
                 if eachlink.find(self.dom) == -1:
                     print('....discarded not in domin')
@@ -129,8 +143,10 @@ class Crawler(object):
     def go(self):
         #process links in queue
         while self.q:
-            url = self.q.pop()
+            url = self.q.popleft()
             self.getPage(url)
+
+        print("\n$$$finished$$$$\n")
 
 def main():
     if len(argv) > 1:
