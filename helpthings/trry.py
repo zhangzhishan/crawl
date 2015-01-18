@@ -43,8 +43,8 @@ data = uop.read()
 data = ungzip(data)
 _xsrf = getXSRF(data.decode())
 url += 'login'
-id = '824656766@mail.nwpu.edu.cn'
-password = 'lyl623652341zzs'
+id = ''
+password = ''
 postDict = {
     '_xsrf': _xsrf,
     'email': id,
